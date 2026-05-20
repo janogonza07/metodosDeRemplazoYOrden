@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Emulación Sistema Operativo - UNAM FES Aragón</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+    <!-- Menú de Navegación Lateral Izquierda -->
+    <nav class="sidebar">
+        <h2>SO Emulador</h2>
+        <ul>
+            <li class="menu-item active" onclick="switchTab('clock')">Reemplazo: Clock</li>
+            <li class="menu-item" onclick="switchTab('optimo')">Reemplazo: Óptimo</li>
+            <li class="menu-item" onclick="switchTab('fcfs')">Planificación: FCFS</li>
+            <li class="menu-item" onclick="switchTab('sjf')">Planificación: SJF</li>
+            <li class="menu-item" onclick="switchTab('comparativa')">Comparativa Global</li>
+        </ul>
+    </nav>
+
+    <!-- Contenedor Principal de Contenido -->
+    <main class="content-container">
+
+        <!-- ================= SECCIÓN CLOCK ================= -->
+        <section id="tab-clock" class="tab-content active">
+            <h2>Algoritmo de Reemplazo de Páginas: Clock (Reloj)</h2>
+            <div class="control-panel">
+                <div class="input-group">
+                    <label>Configuración de Relación:</label>
+                    <select id="clock-config" onchange="ajustarConfiguracion('clock')">
+                        <option value="4-8">4 Frames con 8 Procesos (Demanda Aleatoria)</option>
+                        <option value="8-16">8 Frames con 16 Procesos (Demanda Aleatoria)</option>
+                        <option value="manual">Configuración Manual Dinámica</option>
+                    </select>
+                </div>
+                <div id="clock-manual-inputs" style="display:none;" class="input-row">
+                    <input type="number" id="clock-frames" placeholder="Num. Frames (Ej. 4)" min="1" max="10">
+                    <input type="text" id="clock-string" placeholder="Cadena de ráfagas (Ej. 4,7,5,6,8,2,3,4)">
+                </div>
+                <div class="input-group">
+                    <label>Duración Simulación (Unidades de Tiempo):</label>
+                    <input type="number" id="clock-duration" value="15" min="10" max="70">
+                </div>
+                <button class="btn" onclick="ejecutarClock()">Calcular Simulación</button>
+            </div>
+
+            <div id="clock-resultados" class="results-area" style="display:none;">
+                <h3>Tabla Inicial de Definición</h3>
+                <div class="table-responsive" id="clock-tabla-inicial"></div>
+                
+                <h3>Comportamiento Paso a Paso (Matriz de Reemplazo)</h3>
+                <div class="table-responsive" id="clock-tabla-final"></div>
+                
+                <div class="summary-box">
+                    <p>Total de Fallos de Página: <strong id="clock-fallos" class="alert-text">0</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECCIÓN ÓPTIMO ================= -->
+        <section id="tab-optimo" class="tab-content">
+            <h2>Algoritmo de Reemplazo de Páginas: Óptimo</h2>
+            <div class="control-panel">
+                <div class="input-group">
+                    <label>Configuración de Relación:</label>
+                    <select id="optimo-config" onchange="ajustarConfiguracion('optimo')">
+                        <option value="4-8">4 Frames con 8 Procesos (Demanda Aleatoria)</option>
+                        <option value="8-16">8 Frames con 16 Procesos (Demanda Aleatoria)</option>
+                        <option value="manual">Configuración Manual Dinámica</option>
+                    </select>
+                </div>
+                <div id="optimo-manual-inputs" style="display:none;" class="input-row">
+                    <input type="number" id="optimo-frames" placeholder="Num. Frames" min="1" max="10">
+                    <input type="text" id="optimo-string" placeholder="Cadena de ráfagas (Ej. 5,2,3,8,5,6,7,2,3,4)">
+                </div>
+                <div class="input-group">
+                    <label>Duración Simulación (U. Tiempo):</label>
+                    <input type="number" id="optimo-duration" value="15" min="10" max="70">
+                </div>
+                <button class="btn" onclick="ejecutarOptimo()">Calcular Simulación</button>
+            </div>
+
+            <div id="optimo-resultados" class="results-area" style="display:none;">
+                <h3>Tabla Inicial de Definición</h3>
+                <div class="table-responsive" id="optimo-tabla-inicial"></div>
+                
+                <h3>Comportamiento Paso a Paso</h3>
+                <div class="table-responsive" id="optimo-tabla-final"></div>
+                
+                <div class="summary-box">
+                    <p>Total de Fallos de Página: <strong id="optimo-fallos" class="alert-text">0</strong></p>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECCIÓN FCFS ================= -->
+        <section id="tab-fcfs" class="tab-content">
+            <h2>Planificación de CPU: First-Come, First-Served (FCFS)</h2>
+            <div class="control-panel">
+                <h3>Tabla de Configuración de Procesos</h3>
+                <p class="instruccion">Modifica o añade renglones según necesites. Se sugiere cumplir con el mínimo del proyecto (10 procesos).</p>
+                <div class="table-responsive">
+                    <table id="fcfs-input-table">
+                        <thead>
+                            <tr>
+                                <th>Proceso</th>
+                                <th>Tiempo de Llegada</th>
+                                <th>Tiempo de Ejecución</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>A</td><td><input type="number" value="0" class="proc-llegada"></td><td><input type="number" value="5" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>B</td><td><input type="number" value="10" class="proc-llegada"></td><td><input type="number" value="4" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>C</td><td><input type="number" value="15" class="proc-llegada"></td><td><input type="number" value="2" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>D</td><td><input type="number" value="7" class="proc-llegada"></td><td><input type="number" value="5" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>E</td><td><input type="number" value="13" class="proc-llegada"></td><td><input type="number" value="8" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>F</td><td><input type="number" value="3" class="proc-llegada"></td><td><input type="number" value="3" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>G</td><td><input type="number" value="9" class="proc-llegada"></td><td><input type="number" value="10" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>H</td><td><input type="number" value="12" class="proc-llegada"></td><td><input type="number" value="3" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>I</td><td><input type="number" value="2" class="proc-llegada"></td><td><input type="number" value="8" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>J</td><td><input type="number" value="6" class="proc-llegada"></td><td><input type="number" value="7" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-secundario" onclick="agregarFila('fcfs-input-table')">+ Añadir Proceso</button>
+                    <button class="btn" onclick="ejecutarFCFS()">Calcular Planificación</button>
+                </div>
+            </div>
+
+            <div id="fcfs-resultados" class="results-area" style="display:none;">
+                <h3>Tabla Final de Métrica Analítica</h3>
+                <div class="table-responsive" id="fcfs-tabla-final"></div>
+                
+                <h3>Diagrama Completo de Estados de Transición de CPU</h3>
+                <div class="gantt-wrapper">
+                    <div id="fcfs-gantt" class="gantt-chart"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECCIÓN SJF ================= -->
+        <section id="tab-sjf" class="tab-content">
+            <h2>Planificación de CPU: Shortest Job First (SJF)</h2>
+            <div class="control-panel">
+                <h3>Tabla de Configuración de Procesos</h3>
+                <div class="table-responsive">
+                    <table id="sjf-input-table">
+                        <thead>
+                            <tr>
+                                <th>Proceso</th>
+                                <th>Tiempo de Llegada</th>
+                                <th>Tiempo de Ejecución</th>
+                                <th>Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>A</td><td><input type="number" value="0" class="proc-llegada"></td><td><input type="number" value="5" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>B</td><td><input type="number" value="10" class="proc-llegada"></td><td><input type="number" value="4" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>C</td><td><input type="number" value="15" class="proc-llegada"></td><td><input type="number" value="2" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>D</td><td><input type="number" value="7" class="proc-llegada"></td><td><input type="number" value="5" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>E</td><td><input type="number" value="13" class="proc-llegada"></td><td><input type="number" value="8" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>F</td><td><input type="number" value="3" class="proc-llegada"></td><td><input type="number" value="3" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>G</td><td><input type="number" value="9" class="proc-llegada"></td><td><input type="number" value="10" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>H</td><td><input type="number" value="12" class="proc-llegada"></td><td><input type="number" value="3" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>I</td><td><input type="number" value="2" class="proc-llegada"></td><td><input type="number" value="8" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                            <tr><td>J</td><td><input type="number" value="6" class="proc-llegada"></td><td><input type="number" value="7" class="proc-ejec"></td><td><button class="btn-del" onclick="eliminarFila(this)">X</button></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="action-buttons">
+                    <button class="btn-secundario" onclick="agregarFila('sjf-input-table')">+ Añadir Proceso</button>
+                    <button class="btn" onclick="ejecutarSJF()">Calcular Planificación</button>
+                </div>
+            </div>
+
+            <div id="sjf-resultados" class="results-area" style="display:none;">
+                <h3>Tabla Final de Métrica Analítica</h3>
+                <div class="table-responsive" id="sjf-tabla-final"></div>
+                
+                <h3>Diagrama Completo de Estados de Transición de CPU</h3>
+                <div class="gantt-wrapper">
+                    <div id="sjf-gantt" class="gantt-chart"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ================= SECCIÓN COMPARATIVA GLOBAL ================= -->
+        <section id="tab-comparativa" class="tab-content">
+            <h2>Tabla Comparativa de Rendimiento de Planificación</h2>
+            <p>Métricas consolidadas de las últimas simulaciones calculadas en memoria dinámica.</p>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Algoritmo</th>
+                            <th>Tiempo Medio de Espera (TME)</th>
+                            <th>Tiempo Medio de Retorno (TMR)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>FCFS</strong></td>
+                            <td id="comp-fcfs-espera">-</td>
+                            <td id="comp-fcfs-retorno">-</td>
+                        </tr>
+                        <tr>
+                            <td><strong>SJF</strong></td>
+                            <td id="comp-sjf-espera">-</td>
+                            <td id="comp-sjf-retorno">-</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="summary-box" style="margin-top: 20px;">
+                <h3>Justificación y Análisis de Rendimiento</h3>
+                <p id="analisis-comportamiento">Ejecuta ambas simulaciones de planificación de CPU para generar la comparativa analítica de rendimiento automáticamente.</p>
+            </div>
+        </section>
+
+    </main>
+
+    <script src="script.js"></script>
+</body>
+</html>
