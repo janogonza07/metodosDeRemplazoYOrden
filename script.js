@@ -296,7 +296,8 @@ function ejecutarFCFS() {
         }
     });
 
-    renderResultadosPlanificacion('fcfs', procesos, diagramaGantt, maxTiempo);
+    let colaPorTiempo = construirRastreoPlanificacion(procesos, maxTiempo);
+    renderResultadosPlanificacion('fcfs', procesos, diagramaGantt, maxTiempo, colaPorTiempo);
     
     let promEspera = procesos.reduce((acc, p) => acc + p.espera, 0) / procesos.length;
     let promRetorno = procesos.reduce((acc, p) => acc + p.retorno, 0) / procesos.length;
@@ -356,7 +357,8 @@ function ejecutarSJF() {
         }
     });
 
-    renderResultadosPlanificacion('sjf', terminados, diagramaGantt, maxTiempo);
+    let colaPorTiempo = construirRastreoPlanificacion(terminados, maxTiempo);
+    renderResultadosPlanificacion('sjf', terminados, diagramaGantt, maxTiempo, colaPorTiempo);
 
     let promEspera  = terminados.reduce((acc, p) => acc + p.espera,  0) / terminados.length;
     let promRetorno = terminados.reduce((acc, p) => acc + p.retorno, 0) / terminados.length;
@@ -364,7 +366,45 @@ function ejecutarSJF() {
     actualizarComparativaGlobal();
 }
 
-function renderResultadosPlanificacion(alg, procesos, gantt, maxTiempo) {
+function construirRastreoPlanificacion(procesos, maxTiempo) {
+    let rastreo = [];
+
+    for (let t = 0; t < maxTiempo; t++) {
+        let ejecutando = procesos.find(p => p.comienzo <= t && t < p.fin);
+
+        let esperando = procesos
+            .filter(p => p.llegada <= t && p.fin > t && (!ejecutando || p.id !== ejecutando.id))
+            .sort((a, b) => a.llegada - b.llegada || a.ejecucion - b.ejecucion || a.id.localeCompare(b.id));
+
+        rastreo.push({
+            tiempo: t,
+            cpu: ejecutando ? ejecutando.id : '—',
+            espera: esperando.length > 0 ? esperando.map(p => p.id).join(', ') : 'Vacía'
+        });
+    }
+
+    return rastreo;
+}
+
+function renderListaEspera(alg, colaPorTiempo) {
+    let html = `<table class="queue-table"><thead><tr><th>Tiempo</th><th class="queue-cpu">CPU</th><th>Lista de Espera</th></tr></thead><tbody>`;
+
+    colaPorTiempo.forEach(item => {
+        let cpuClase = item.cpu === '—' ? 'queue-idle' : 'queue-exec';
+        let esperaClase = item.espera === 'Vacía' ? 'queue-empty' : '';
+
+        html += `<tr>
+            <td class="queue-time">${item.tiempo + 1}</td>
+            <td class="queue-cpu ${cpuClase}">${item.cpu}</td>
+            <td class="queue-wait ${esperaClase}">${item.espera}</td>
+        </tr>`;
+    });
+
+    html += `</tbody></table>`;
+    document.getElementById(`${alg}-queue-container`).innerHTML = html;
+}
+
+function renderResultadosPlanificacion(alg, procesos, gantt, maxTiempo, colaPorTiempo) {
     procesos.sort((a,b) => a.id.localeCompare(b.id));
 
     let promEspera  = (procesos.reduce((acc, p) => acc + p.espera,  0) / procesos.length).toFixed(2);
@@ -389,32 +429,37 @@ function renderResultadosPlanificacion(alg, procesos, gantt, maxTiempo) {
 
     document.getElementById(`${alg}-tabla-final`).innerHTML = htmlTabla;
 
+
     let chartContainer = document.getElementById(`${alg}-gantt`);
     chartContainer.innerHTML = '';
 
+    let table = document.createElement('table');
+    table.className = 'gantt-table';
+
+    let thead = document.createElement('thead');
+    thead.innerHTML = `<tr><th>Proceso</th>${Array.from({ length: maxTiempo }, (_, t) => `<th>${t}</th>`).join('')}</tr>`;
+    table.appendChild(thead);
+
+    let tbody = document.createElement('tbody');
     Object.keys(gantt).sort().forEach(procId => {
-        let row = document.createElement('div');
-        row.className = 'gantt-row';
-        
-        let label = document.createElement('div');
-        label.className = 'gantt-label';
-        label.innerText = `Proc ${procId}`;
-        row.appendChild(label);
+        let row = document.createElement('tr');
+        row.innerHTML = `<th>${procId}</th>`;
 
-        let timeline = document.createElement('div');
-        timeline.className = 'gantt-timeline';
+        for (let t = 0; t < maxTiempo; t++) {
+            let estado = gantt[procId][t] || ' ';
+            let cell = document.createElement('td');
+            cell.className = `gantt-block block-${estado.toLowerCase().trim() || 'vacio'}`;
+            cell.innerText = estado !== ' ' ? estado : '';
+            row.appendChild(cell);
+        }
 
-        gantt[procId].forEach(estado => {
-            let block = document.createElement('div');
-            block.className = `gantt-block block-${estado.toLowerCase().trim() || 'vacio'}`;
-            block.innerText = estado !== ' ' ? estado : '';
-            timeline.appendChild(block);
-        });
-
-        row.appendChild(timeline);
-        chartContainer.appendChild(row);
+        tbody.appendChild(row);
     });
 
+    table.appendChild(tbody);
+    chartContainer.appendChild(table);
+
+    renderListaEspera(alg, colaPorTiempo);
     document.getElementById(`${alg}-resultados`).style.display = 'block';
 }
 

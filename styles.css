@@ -236,43 +236,105 @@ th {
     padding: 10px 0;
 }
 
+
 .gantt-chart {
     background-color: var(--bg-white);
     padding: 15px;
     border: 1px solid var(--border-color);
     border-radius: 4px;
+    overflow-x: auto;
+    max-width: 100%;
+    box-sizing: border-box;
 }
 
-.gantt-row {
-    display: flex;
-    align-items: center;
-    margin-bottom: 8px;
+.gantt-table {
+    width: max-content;
+    border-collapse: collapse;
+    font-size: 0.8rem;
+    table-layout: fixed;
 }
 
-.gantt-label {
+.gantt-table th,
+.gantt-table td {
+    width: 24px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0;
+    text-align: center;
+    border: 1px solid var(--border-color);
+    vertical-align: middle;
+}
+
+.gantt-table thead th {
+    background-color: #f8f9fa;
+    font-weight: 700;
+    color: #495057;
+}
+
+.gantt-table tbody th {
     width: 70px;
-    font-weight: 600;
-    font-size: 0.85rem;
-}
-
-.gantt-timeline {
-    display: flex;
-    gap: 1px;
+    min-width: 70px;
+    background-color: #f8f9fa;
+    font-weight: 700;
+    text-align: center;
+    color: #333;
 }
 
 .gantt-block {
-    width: 22px;
-    height: 22px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    width: 24px;
+    height: 24px;
+    display: table-cell;
     font-size: 0.75rem;
     font-weight: bold;
     color: white;
-    border-radius: 2px;
+    border-radius: 0;
+    box-sizing: border-box;
 }
 
 .block-e { background-color: var(--state-exec); }
 .block-l { background-color: var(--state-ready); }
 .block-f { background-color: var(--state-final); }
 .block-vacio { background-color: #f1f3f5; color: transparent; }
+
+.queue-table {
+    width: 100%;
+    font-size: 0.92rem;
+}
+
+.queue-table th,
+.queue-table td {
+    padding: 10px 12px;
+    text-align: left;
+}
+
+.queue-time {
+    width: 90px;
+    font-weight: 700;
+    background-color: #f8f9fa;
+}
+
+.queue-cpu {
+    width: 110px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.queue-exec {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.queue-idle {
+    background-color: #e2e3e5;
+    color: #383d41;
+}
+
+.queue-wait {
+    text-align: left;
+    white-space: normal;
+}
+
+.queue-empty {
+    color: #6c757d;
+    font-style: italic;
+}
