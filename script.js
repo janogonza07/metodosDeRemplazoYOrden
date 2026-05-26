@@ -76,10 +76,12 @@ function ejecutarClock() {
     let bitsReferencia = Array(numFrames).fill(0);
     let puntero = 0;
     let fallosPagina = 0;
-    
-    let matrizResultado = Array(numFrames).fill(null).map(() => Array(duracion).fill(''));
+
+    let matrizPaginas = Array(numFrames).fill(null).map(() => Array(duracion).fill(''));
+    let matrizBits    = Array(numFrames).fill(null).map(() => Array(duracion).fill(''));
+    let matrizAp      = Array(numFrames).fill(null).map(() => Array(duracion).fill(''));
     let historialFallos = Array(duracion).fill('');
-    let historialPunteros = Array(duracion).fill(-1);
+    let ultimoReemplazo = -1;
 
     for (let t = 0; t < duracion; t++) {
         let paginaActual = paginas[t];
@@ -95,22 +97,23 @@ function ejecutarClock() {
 
         if (!encontrado) {
             fallosPagina++;
-            historialFallos[t] = 'X';
-            
+            historialFallos[t] = 'x';
+
             while (true) {
                 if (frames[puntero] === -1) {
+                    // Carga en frame vacío: puntero visual queda en F1, no se mueve
                     frames[puntero] = paginaActual;
                     bitsReferencia[puntero] = 1;
-                    historialPunteros[t] = puntero;
                     puntero = (puntero + 1) % numFrames;
                     break;
                 } else if (bitsReferencia[puntero] === 1) {
                     bitsReferencia[puntero] = 0;
                     puntero = (puntero + 1) % numFrames;
                 } else {
+                    // Reemplazo real (pila llena): ahora sí mueve el puntero visual
                     frames[puntero] = paginaActual;
                     bitsReferencia[puntero] = 1;
-                    historialPunteros[t] = puntero;
+                    ultimoReemplazo = puntero;
                     puntero = (puntero + 1) % numFrames;
                     break;
                 }
@@ -119,14 +122,74 @@ function ejecutarClock() {
 
         for (let i = 0; i < numFrames; i++) {
             if (frames[i] !== -1) {
-                matrizResultado[i][t] = `${frames[i]} (${bitsReferencia[i]})`;
+                matrizPaginas[i][t] = frames[i];
+                matrizBits[i][t]    = bitsReferencia[i];
             }
+        }
+        // Mientras la pila se llena: * en F1 (índice 0). Cuando hay reemplazo real: * en el frame reemplazado.
+        let posAp = ultimoReemplazo !== -1 ? ultimoReemplazo : 0;
+        if (frames[posAp] !== -1) {
+            matrizAp[posAp][t] = '*';
         }
     }
 
-    renderTablaFinalReemplazo('clock-tabla-final', paginas, matrizResultado, historialFallos, historialPunteros);
+    renderTablaFinalClock('clock-tabla-final', paginas, matrizPaginas, matrizBits, matrizAp, historialFallos);
     document.getElementById('clock-fallos').innerText = fallosPagina;
     document.getElementById('clock-resultados').style.display = 'block';
+}
+
+function renderTablaFinalClock(containerId, paginas, matrizPaginas, matrizBits, matrizAp, historialFallos) {
+    let duracion = paginas.length;
+    let numFrames = matrizPaginas.length;
+
+    let html = `<table class="clock-table"><thead>`;
+
+    // Fila Demanda
+    html += `<tr><th>Demanda</th>`;
+    for (let t = 0; t < duracion; t++) {
+        html += `<th colspan="3" class="clock-demand">${paginas[t]}</th>`;
+    }
+    html += `</tr>`;
+
+    // Fila Fallo de página
+    html += `<tr><th>Fallo de página</th>`;
+    for (let t = 0; t < duracion; t++) {
+        let f = historialFallos[t];
+        html += `<td colspan="3" class="${f ? 'clock-fault' : ''}">${f}</td>`;
+    }
+    html += `</tr>`;
+
+    // Fila sub-cabecera Bit / Ap
+    html += `<tr><th>Frame</th>`;
+    for (let t = 0; t < duracion; t++) {
+        html += `<th class="clock-sh"></th><th class="clock-sh">Bit</th><th class="clock-sh">Ap</th>`;
+    }
+    html += `</tr></thead><tbody>`;
+
+    // Filas de frames
+    for (let i = 0; i < numFrames; i++) {
+        html += `<tr><th>F${i + 1}</th>`;
+        for (let t = 0; t < duracion; t++) {
+            let pag = matrizPaginas[i][t];
+            let bit = matrizBits[i][t];
+            let ap  = matrizAp[i][t];
+            if (pag === '') {
+                html += `<td></td><td></td><td></td>`;
+            } else {
+                html += `<td>${pag}</td><td>${bit}</td><td class="${ap ? 'clock-ap' : ''}">${ap}</td>`;
+            }
+        }
+        html += `</tr>`;
+    }
+
+    // Fila Tiempo
+    html += `<tr><th>Tiempo</th>`;
+    for (let t = 0; t < duracion; t++) {
+        html += `<td colspan="3">${t + 1}</td>`;
+    }
+    html += `</tr></tbody></table>`;
+
+    document.getElementById(containerId).innerHTML = html;
 }
 
 // ================= ALGORITMO DE REEMPLAZO: ÓPTIMO =================

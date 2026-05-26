@@ -219,6 +219,34 @@ th {
     font-weight: bold;
 }
 
+/* Tabla Clock con sub-columnas Bit / Ap */
+.clock-table td, .clock-table th {
+    padding: 5px 7px;
+    font-size: 0.82rem;
+}
+
+.clock-table .clock-demand {
+    background-color: #f1f3f5;
+    font-weight: 600;
+}
+
+.clock-table .clock-fault {
+    color: #dc3545;
+    font-weight: bold;
+}
+
+.clock-table .clock-sh {
+    font-size: 0.72rem;
+    color: #555;
+    background-color: #f8f9fa;
+    padding: 3px 5px;
+}
+
+.clock-table .clock-ap {
+    color: #dc3545;
+    font-weight: bold;
+}
+
 .alert-text {
     color: #dc3545;
 }
