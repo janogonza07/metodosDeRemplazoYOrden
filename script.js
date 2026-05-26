@@ -72,7 +72,6 @@ function ejecutarClock() {
 
     renderTablaInicial('clock-tabla-inicial', numFrames, [...new Set(paginas)]);
 
-    // Simulación con Lista Circular
     let frames = Array(numFrames).fill(-1);
     let bitsReferencia = Array(numFrames).fill(0);
     let puntero = 0;
@@ -250,15 +249,19 @@ function renderTablaFinalReemplazo(containerId, demandas, matriz, fallos, punter
     document.getElementById(containerId).innerHTML = html;
 }
 
-// Auxiliar para parsear datos de inputs
+// ================= AUXILIAR: Parsear inputs de tabla =================
+// CORRECCIÓN 1: uso de isNaN() en lugar de || para distinguir entre
+// "el usuario escribió 0" y "el campo está vacío/inválido"
 function obtenerProcesosDeTabla(tablaId) {
     const rows = document.getElementById(tablaId).getElementsByTagName('tbody')[0].rows;
     let lista = [];
-    for(let i=0; i<rows.length; i++) {
+    for (let i = 0; i < rows.length; i++) {
+        const llegadaVal = parseInt(rows[i].getElementsByClassName('proc-llegada')[0].value);
+        const ejecucionVal = parseInt(rows[i].getElementsByClassName('proc-ejec')[0].value);
         lista.push({
-            id: rows[i].cells[0].innerText,
-            llegada: parseInt(rows[i].getElementsByClassName('proc-llegada')[0].value) || 0,
-            ejecucion: parseInt(rows[i].getElementsByClassName('proc-ejec')[0].value) || 1
+            id: rows[i].cells[0].innerText.trim(),
+            llegada: isNaN(llegadaVal) ? 0 : llegadaVal,
+            ejecucion: isNaN(ejecucionVal) || ejecucionVal <= 0 ? 1 : ejecucionVal
         });
     }
     return lista;
@@ -302,50 +305,60 @@ function ejecutarFCFS() {
 }
 
 // ================= PLANIFICACIÓN DE CPU: SJF =================
+// CORRECCIÓN 2: spread explícito con map({ ...p }) para que cada objeto
+// sea independiente y las propiedades calculadas no se pierdan por referencia.
+// CORRECCIÓN 3: sort con desempate estable: ejecucion → llegada → id,
+// para que procesos con el mismo tiempo de ráfaga siempre salgan en el
+// mismo orden y no produzcan resultados distintos en cada ejecución.
 function ejecutarSJF() {
     let procesos = obtenerProcesosDeTabla('sjf-input-table');
-    let copiaProcesos = [...procesos];
+    let pendientes = procesos.map(p => ({ ...p }));
     let terminados = [];
     let tiempoActual = 0;
     let diagramaGantt = {};
 
     procesos.forEach(p => diagramaGantt[p.id] = []);
 
-    while(copiaProcesos.length > 0) {
-        let disponibles = copiaProcesos.filter(p => p.llegada <= tiempoActual);
+    while (pendientes.length > 0) {
+        let disponibles = pendientes.filter(p => p.llegada <= tiempoActual);
 
-        if(disponibles.length === 0) {
-            tiempoActual = Math.min(...copiaProcesos.map(p => p.llegada));
+        if (disponibles.length === 0) {
+            tiempoActual = Math.min(...pendientes.map(p => p.llegada));
             continue;
         }
 
-        disponibles.sort((a, b) => a.ejecucion - b.ejecucion);
+        disponibles.sort((a, b) =>
+            a.ejecucion !== b.ejecucion ? a.ejecucion - b.ejecucion :
+            a.llegada   !== b.llegada   ? a.llegada   - b.llegada   :
+            a.id.localeCompare(b.id)
+        );
+
         let seleccionado = disponibles[0];
 
         seleccionado.comienzo = tiempoActual;
-        seleccionado.fin = seleccionado.comienzo + seleccionado.ejecucion;
-        seleccionado.retorno = seleccionado.fin - seleccionado.llegada;
-        seleccionado.espera = seleccionado.comienzo - seleccionado.llegada;
+        seleccionado.fin      = seleccionado.comienzo + seleccionado.ejecucion;
+        seleccionado.retorno  = seleccionado.fin - seleccionado.llegada;
+        seleccionado.espera   = seleccionado.comienzo - seleccionado.llegada;
 
         tiempoActual = seleccionado.fin;
         terminados.push(seleccionado);
-        copiaProcesos = copiaProcesos.filter(p => p.id !== seleccionado.id);
+        pendientes = pendientes.filter(p => p.id !== seleccionado.id);
     }
 
     let maxTiempo = Math.max(...terminados.map(p => p.fin), 35);
 
     terminados.forEach(p => {
-        for(let t=0; t<maxTiempo; t++) {
-            if(t >= p.llegada && t < p.comienzo) diagramaGantt[p.id].push('L');
-            else if(t >= p.comienzo && t < p.fin) diagramaGantt[p.id].push('E');
-            else if(t >= p.fin) diagramaGantt[p.id].push('F');
-            else diagramaGantt[p.id].push(' ');
+        for (let t = 0; t < maxTiempo; t++) {
+            if      (t >= p.llegada  && t < p.comienzo) diagramaGantt[p.id].push('L');
+            else if (t >= p.comienzo && t < p.fin)      diagramaGantt[p.id].push('E');
+            else if (t >= p.fin)                         diagramaGantt[p.id].push('F');
+            else                                         diagramaGantt[p.id].push(' ');
         }
     });
 
     renderResultadosPlanificacion('sjf', terminados, diagramaGantt, maxTiempo);
 
-    let promEspera = terminados.reduce((acc, p) => acc + p.espera, 0) / terminados.length;
+    let promEspera  = terminados.reduce((acc, p) => acc + p.espera,  0) / terminados.length;
     let promRetorno = terminados.reduce((acc, p) => acc + p.retorno, 0) / terminados.length;
     metricasGlobales.sjf = { espera: promEspera.toFixed(2), retorno: promRetorno.toFixed(2) };
     actualizarComparativaGlobal();
@@ -354,7 +367,7 @@ function ejecutarSJF() {
 function renderResultadosPlanificacion(alg, procesos, gantt, maxTiempo) {
     procesos.sort((a,b) => a.id.localeCompare(b.id));
 
-    let promEspera = (procesos.reduce((acc, p) => acc + p.espera, 0) / procesos.length).toFixed(2);
+    let promEspera  = (procesos.reduce((acc, p) => acc + p.espera,  0) / procesos.length).toFixed(2);
     let promRetorno = (procesos.reduce((acc, p) => acc + p.retorno, 0) / procesos.length).toFixed(2);
 
     let htmlTabla = `<table><thead><tr>
@@ -406,12 +419,12 @@ function renderResultadosPlanificacion(alg, procesos, gantt, maxTiempo) {
 }
 
 function actualizarComparativaGlobal() {
-    document.getElementById('comp-fcfs-espera').innerText = metricasGlobales.fcfs.espera || '-';
-    document.getElementById('comp-fcfs-retorno').innerText = metricasGlobales.fcfs.retorno || '-';
-    document.getElementById('comp-sjf-espera').innerText = metricasGlobales.sjf.espera || '-';
-    document.getElementById('comp-sjf-retorno').innerText = metricasGlobales.sjf.retorno || '-';
+    document.getElementById('comp-fcfs-espera').innerText   = metricasGlobales.fcfs.espera   || '-';
+    document.getElementById('comp-fcfs-retorno').innerText  = metricasGlobales.fcfs.retorno  || '-';
+    document.getElementById('comp-sjf-espera').innerText    = metricasGlobales.sjf.espera    || '-';
+    document.getElementById('comp-sjf-retorno').innerText   = metricasGlobales.sjf.retorno   || '-';
 
-    if(metricasGlobales.fcfs.espera > 0 && metricasGlobales.sjf.espera > 0) {
+    if (metricasGlobales.fcfs.espera > 0 && metricasGlobales.sjf.espera > 0) {
         let diff = (metricasGlobales.fcfs.espera - metricasGlobales.sjf.espera).toFixed(2);
         document.getElementById('analisis-comportamiento').innerHTML = `
             El algoritmo <strong>SJF</strong> reduce el Tiempo Medio de Espera en <strong>${Math.abs(diff)} unidades de tiempo</strong> frente a <strong>FCFS</strong> en esta corrida, evitando que ráfagas largas detengan procesos cortos de manera ineficiente.
